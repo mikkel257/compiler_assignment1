@@ -18,18 +18,20 @@ The labels like "#Addition" help later in processing the parse tree.
 */
 
 
-start   : expr EOF ;
+start   : assignment* expr EOF ;
 
-expr	: expr '+' expr # Addition 
-	| expr '-' expr # Subtraction //added
-	| expr '*' expr # Multiplication
-	| expr '/' expr # Division //added
+assignment : ID '=' expr ';' ;
+
+expr	: expr op=OP2 expr # Multiplication
+	| expr '+' expr # Addition
 	| NUM  	        # Constant
 	| ID            # Variable
 	| '(' expr ')'  # Parenthesis
-	| '-' NUM 		# Negative //added
 	;
-	
+
+OP2 : ('*'|'/') ;
+
 NUM 	: ('0'..'9')+ ;
-ID	: ('A'..'Z') ;
+ID	: ('A'..'Z'|'a'..'z'|'_')* ;
 WHITESPACE : [ \n\t\r]+ -> skip;
+

@@ -1,45 +1,44 @@
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
-
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
 import org.antlr.v4.runtime.CharStreams;
 import java.io.IOException;
 
 public class main {
-    public static void main(String[] args) throws IOException{
+	public static void main(String[] args) throws IOException {
 
-	// we expect exactly one argument: the name of the input file
-	if (args.length!=1) {
-	    System.err.println("\n");
-	    System.err.println("Simple calculator\n");
-	    System.err.println("=================\n\n");
-	    System.err.println("Please give as input argument a filename\n");
-	    System.exit(-1);
+		// we expect exactly one argument: the name of the input file
+		if (args.length != 1) {
+			System.err.println("\n");
+			System.err.println("Simple calculator\n");
+			System.err.println("=================\n\n");
+			System.err.println("Please give as input argument a filename\n");
+			System.exit(-1);
+		}
+		String filename = args[0];
+
+		// open the input file
+		CharStream input = CharStreams.fromFileName(filename);
+		// new ANTLRFileStream (filename); // depricated
+
+		// create a lexer/scanner
+		simpleCalcLexer lex = new simpleCalcLexer(input);
+
+		// get the stream of tokens from the scanner
+		CommonTokenStream tokens = new CommonTokenStream(lex);
+
+		// create a parser
+		simpleCalcParser parser = new simpleCalcParser(tokens);
+
+		// and parse anything from the grammar for "start"
+		ParseTree parseTree = parser.start();
+
+		// Construct an interpreter and run it on the parse tree
+		Interpreter interpreter = new Interpreter();
+		Double result = interpreter.visit(parseTree);
+
+		System.out.println("The result is: " + result);
 	}
-	String filename=args[0];
-
-	// open the input file
-	CharStream input = CharStreams.fromFileName(filename);
-	    //new ANTLRFileStream (filename); // depricated
-	
-	// create a lexer/scanner
-	simpleCalcLexer lex = new simpleCalcLexer(input);
-	
-	// get the stream of tokens from the scanner
-	CommonTokenStream tokens = new CommonTokenStream(lex);
-	
-	// create a parser
-	simpleCalcParser parser = new simpleCalcParser(tokens);
-	
-	// and parse anything from the grammar for "start"
-	ParseTree parseTree = parser.start();
-
-	// Construct an interpreter and run it on the parse tree
-	Interpreter interpreter = new Interpreter();
-	Double result=interpreter.visit(parseTree);
-	
-	System.out.println("The result is: "+result);
-    }
 }
 
 // We write an interpreter that implements interface
@@ -49,45 +48,42 @@ public class main {
 
 class Interpreter extends AbstractParseTreeVisitor<Double> implements simpleCalcVisitor<Double> {
 
-    public Double visitStart(simpleCalcParser.StartContext ctx){
-	return visit(ctx.expr());
-    };
+	public static Environment env = new Environment();
 
-    public Double visitParenthesis(simpleCalcParser.ParenthesisContext ctx){
-	return visit(ctx.expr());
-    };
-    
-    public Double visitVariable(simpleCalcParser.VariableContext ctx){
-	System.out.println("Var");
-	System.err.println("Sorry, variables are not yet supported -- replacing by -1.0.\n");
-	return new Double(-1.0);
-    };
-    
-    public Double visitAddition(simpleCalcParser.AdditionContext ctx){
-	return visit(ctx.expr(0))+visit(ctx.expr(1));
-    };
-    
-    //Implemented code for subtraction
-    public Double visitSubtraction(simpleCalcParser.SubtractionContext ctx){
-    	return visit(ctx.expr(0))-visit(ctx.expr(1));
-    }
+	public Double visitStart(simpleCalcParser.StartContext ctx) {
+		for (simpleCalcParser.AssignmentContext c : ctx.assignment()) {
+			visitAssignment(c);
+		}
+		return visit(ctx.expr());
+	};
 
-    public Double visitMultiplication(simpleCalcParser.MultiplicationContext ctx){
-	return visit(ctx.expr(0))*visit(ctx.expr(1));
-    };
-    
-    //Implemented code for division. Does take division with zero into account.
-    public Double visitDivision(simpleCalcParser.DivisionContext ctx) {
-    		return visit(ctx.expr(0))/visit(ctx.expr(1));
-    	};
+	public Double visitAssignment(simpleCalcParser.AssignmentContext ctx) {
+		Double result = visit(ctx.expr());
+		env.setVariable(ctx.ID().getText(), result);
+		return result;
+	};
 
+	public Double visitParenthesis(simpleCalcParser.ParenthesisContext ctx) {
+		return visit(ctx.expr());
+	};
 
-    public Double visitConstant(simpleCalcParser.ConstantContext ctx){
-	return Double.parseDouble(ctx.getText()); // new Double(ctx.NUM()); // Integer.parseInt(string);
-    }
+	public Double visitVariable(simpleCalcParser.VariableContext ctx) {
+		return env.getVariable(ctx.getText());
+	};
 
-	//Implemented code for negative numbers. to allow negative something like -5 in the start of an expression.
-	public Double visitNegative(simpleCalcParser.NegativeContext ctx) {
+	public Double visitAddition(simpleCalcParser.AdditionContext ctx) {
+		return visit(ctx.expr(0)) + visit(ctx.expr(1));
+	};
+
+	public Double visitMultiplication(simpleCalcParser.MultiplicationContext ctx) {
+		if (ctx.op.getText().equals("*"))
+			return visit(ctx.expr(0)) * visit(ctx.expr(1));
+		else
+			return visit(ctx.expr(0)) / visit(ctx.expr(1));
+
+	};
+
+	public Double visitConstant(simpleCalcParser.ConstantContext ctx) {
 		return Double.parseDouble(ctx.getText());
 	};
 }
