@@ -22,14 +22,15 @@ start   : assignment* expr EOF ;
 
 assignment : ID '=' expr ';' ;
 
-expr	: expr op=OP2 expr # Multiplication
-	| expr '+' expr # Addition
+expr	: expr OP2 expr # Multiplication
+	| expr OP1 expr # Addition
 	| NUM  	        # Constant
 	| ID            # Variable
 	| '(' expr ')'  # Parenthesis
 	;
 
 OP2 : ('*'|'/') ;
+OP1 : ('+'|'-') ;
 
 NUM 	: ('0'..'9')+ ;
 ID	: ('A'..'Z'|'a'..'z'|'_')* ;
