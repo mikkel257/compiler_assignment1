@@ -1,3 +1,19 @@
-x=17/12;
-ifi=x*x/2+17;
-ifi+1
+x = 10;
+y = 5;
+z = x;
+IF (x != y) DO { 
+    z = 2; 
+   IF (NOT(z < y AND y >= z)) DO {i = 20;};
+   } ELSE DO {
+    x = 5 + 2;
+    y = 5 - 1 / (2 * 2);
+};
+
+i=0;
+u=8;
+
+WHILE (y == 5 AND i<6) DO {u = 0; i = i + 1;};
+
+IF (x==0 OR y>z) DO {z=1; y=2;} ELSE DO {z=0;};
+
+i

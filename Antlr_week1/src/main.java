@@ -1,25 +1,27 @@
-import org.antlr.v4.runtime.tree.ParseTreeVisitor;
+
+
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
+
 import org.antlr.v4.runtime.CharStreams;
 import java.io.IOException;
 
 public class main {
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException{
 
 		// we expect exactly one argument: the name of the input file
-		if (args.length != 1) {
+		if (args.length!=1) {
 			System.err.println("\n");
 			System.err.println("Simple calculator\n");
 			System.err.println("=================\n\n");
 			System.err.println("Please give as input argument a filename\n");
 			System.exit(-1);
 		}
-		String filename = args[0];
+		String filename=args[0];
 
 		// open the input file
 		CharStream input = CharStreams.fromFileName(filename);
-		// new ANTLRFileStream (filename); // depricated
+		//new ANTLRFileStream (filename); // depricated
 
 		// create a lexer/scanner
 		simpleCalcLexer lex = new simpleCalcLexer(input);
@@ -35,9 +37,9 @@ public class main {
 
 		// Construct an interpreter and run it on the parse tree
 		Interpreter interpreter = new Interpreter();
-		Double result = interpreter.visit(parseTree);
+		Double result=(Double)interpreter.visit(parseTree);
 
-		System.out.println("The result is: " + result);
+		System.out.println("The result is: "+result);
 	}
 }
 
@@ -46,47 +48,150 @@ public class main {
 // This is parameterized over a return type "<T>" which is in our case
 // simply a Double.
 
-class Interpreter extends AbstractParseTreeVisitor<Double> implements simpleCalcVisitor<Double> {
+class Interpreter extends AbstractParseTreeVisitor<Object> implements simpleCalcVisitor<Object> {
 
-	public static Environment env = new Environment();
+	public static Environment env=new Environment();
 
-	public Double visitStart(simpleCalcParser.StartContext ctx) {
-		for (simpleCalcParser.AssignmentContext c : ctx.assignment()) {
-			visitAssignment(c);
+	public Double visitStart(simpleCalcParser.StartContext ctx){
+		for(simpleCalcParser.StatementContext c : ctx.statement()){ 
+			visit(c);
 		}
-		return visit(ctx.expr());
+		return (Double) visit(ctx.expr());
 	};
 
-	public Double visitAssignment(simpleCalcParser.AssignmentContext ctx) {
-		Double result = visit(ctx.expr());
-		env.setVariable(ctx.ID().getText(), result);
+	public Double visitAssigment(simpleCalcParser.AssigmentContext ctx){
+		Double result=(Double) visit(ctx.expr());
+		env.setVariable(ctx.ID().getText(),result);
 		return result;
 	};
 
-	public Double visitParenthesis(simpleCalcParser.ParenthesisContext ctx) {
-		return visit(ctx.expr());
+	public Double visitParenthesis(simpleCalcParser.ParenthesisContext ctx){
+		return (Double) visit(ctx.expr());
 	};
 
-	public Double visitVariable(simpleCalcParser.VariableContext ctx) {
+	public Double visitVariable(simpleCalcParser.VariableContext ctx){
 		return env.getVariable(ctx.getText());
 	};
 
-	public Double visitAddition(simpleCalcParser.AdditionContext ctx) {
+	public Double visitAdditionSub(simpleCalcParser.AdditionSubContext ctx){
+
 		if (ctx.OP1().getText().equals("+"))
-			return visit(ctx.expr(0)) + visit(ctx.expr(1));
+			return (Double)(visit(ctx.expr(0)))+(Double)(visit(ctx.expr(1)));
 		else
-			return visit(ctx.expr(0)) - visit(ctx.expr(1));
+			return (Double)(visit(ctx.expr(0)))-(Double)(visit(ctx.expr(1)));
+
 	};
 
-	public Double visitMultiplication(simpleCalcParser.MultiplicationContext ctx) {
+	public Double visitMultiplication(simpleCalcParser.MultiplicationContext ctx){
 		if (ctx.OP2().getText().equals("*"))
-			return visit(ctx.expr(0)) * visit(ctx.expr(1));
+			return (Double)(visit(ctx.expr(0)))*(Double)(visit(ctx.expr(1)));
 		else
-			return visit(ctx.expr(0)) / visit(ctx.expr(1));
+			return (Double)(visit(ctx.expr(0)))/(Double)(visit(ctx.expr(1)));
 
 	};
 
-	public Double visitConstant(simpleCalcParser.ConstantContext ctx) {
-		return Double.parseDouble(ctx.getText());
-	};
+	public Double visitConstant(simpleCalcParser.ConstantContext ctx){
+		return Double.parseDouble(ctx.getText()); 
+	}
+
+
+	public Double visitWhile(simpleCalcParser.WhileContext ctx) {
+		while((Boolean)visit(ctx.condition()))
+			for(simpleCalcParser.StatementContext state : ctx.statement())
+				visit(state);
+
+		return null;
+	}
+
+	public Object visitIf(simpleCalcParser.IfContext ctx) {
+		if((Boolean)visit(ctx.condition()) == true){
+			for(simpleCalcParser.StatementContext state : ctx.statement())
+				visit(state);
+		}
+
+		return null;
+	}
+
+	public Object visitIfElse(simpleCalcParser.IfElseContext ctx) {
+		if((Boolean)visit(ctx.condition()) == true)
+			for(simpleCalcParser.StatementContext state : ctx.statement())
+				visit(state);
+		else
+			for(simpleCalcParser.Statement2Context state2 : ctx.statement2())
+				visit(state2);
+
+		return null;
+	}
+
+	public Boolean visitCompare(simpleCalcParser.CompareContext ctx) {
+		switch(ctx.COND().toString()){
+		case "<":
+			if((Double)(visit(ctx.expr(0))) < (Double)(visit(ctx.expr(1))))
+				return new Boolean(true);
+			else
+				return new Boolean(false);
+		case ">":
+			if((Double)(visit(ctx.expr(0))) > (Double)(visit(ctx.expr(1))))
+				return new Boolean(true);
+			else
+				return new Boolean(false);
+		case ">=":
+			if((Double)(visit(ctx.expr(0))) >= (Double)(visit(ctx.expr(1))))
+				return new Boolean(true);
+			else
+				return new Boolean(false);
+		case "<=":
+			if((Double)(visit(ctx.expr(0))) <= (Double)(visit(ctx.expr(1))))
+				return new Boolean(true);
+			else
+				return new Boolean(false);
+		case "==":
+			if((boolean)(visit(ctx.expr(0))).equals((Double)(visit(ctx.expr(1)))))
+				return new Boolean(true);
+			else{
+				return new Boolean(false);
+			}
+		case "!=":
+			if(((boolean)!(visit(ctx.expr(0))).equals((Double)(visit(ctx.expr(1))))))
+				return new Boolean(true);
+			else{
+				return new Boolean(false);
+			}
+		}
+
+		return null;
+	}
+
+	public Object visitConditionAND(simpleCalcParser.ConditionANDContext ctx) {
+		if((Boolean)visit(ctx.condition(0)) && (Boolean)visit(ctx.condition(1)))
+			return true;
+		else
+			return false;
+	}
+
+	public Object visitConditionOR(simpleCalcParser.ConditionORContext ctx) {
+		if((Boolean)visit(ctx.condition(0)) || (Boolean)visit(ctx.condition(1)))
+			return true;
+		else
+			return false;
+	}
+
+	@Override
+	public Object visitStatement2(simpleCalcParser.Statement2Context ctx) {
+		visit(ctx.statement());
+		return null;
+	}
+
+	@Override
+	public Boolean visitConditionNOT(simpleCalcParser.ConditionNOTContext ctx) {
+		return new Boolean(!((Boolean) visit(ctx.condition())));
+	}
+
+	@Override
+	public Boolean visitConditionParenthesis(simpleCalcParser.ConditionParenthesisContext ctx) {
+		return new Boolean((Boolean) visit(ctx.condition()));
+	}
+
+
+
 }
